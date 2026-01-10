@@ -19,6 +19,7 @@ def initialize_client() -> Client:
         auth_path = os.path.join("secrets", "authentication.json")
         with open(auth_path) as f:
             auth_details = json.load(f)
+        client = Client()
         token_response = client.refresh_access_token(
             client_id=auth_details["client_id"],
             client_secret=auth_details["client_secret"],
