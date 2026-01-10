@@ -10,3 +10,4 @@ wheels/
 .venv
 /secrets/
 /fit_files/
+/database/
