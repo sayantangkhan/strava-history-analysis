@@ -45,6 +45,7 @@ def update_spine_with_api_pull(df: pl.DataFrame) -> pl.DataFrame:
     unseen_ids = []
     datetimes = []
     timeseries_data = []
+    activity_type = []
     paths = []
 
     for activity in client.get_activities():
@@ -53,6 +54,7 @@ def update_spine_with_api_pull(df: pl.DataFrame) -> pl.DataFrame:
             break
         unseen_ids.append(activity_id)
         datetimes.append(activity.start_date)
+        activity_type.append(activity.type.root)
         activity_stream = client.get_activity_streams(activity_id)
         activity_stream = {k: v.model_dump() for k, v in activity_stream.items()}
         timeseries_data.append(activity_stream)
@@ -67,6 +69,7 @@ def update_spine_with_api_pull(df: pl.DataFrame) -> pl.DataFrame:
         {
             "Activity ID": reversed(unseen_ids),
             "Activity Date": reversed(datetimes),
+            "Activity Type": reversed(activity_type),
             "Filename": reversed(paths),
         }
     )
