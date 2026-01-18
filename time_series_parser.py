@@ -43,3 +43,18 @@ def parse_fit_file(fit_file_path: str) -> pl.DataFrame:
                 v.append(None)
 
     return pl.DataFrame(dataframe)
+
+
+def parse_strava_series(series_file_path: str) -> pl.DataFrame:
+    """
+    We iterate through the fields specified in the json, with the different json keys corresponding to the different
+    columns in the dataframe.
+    """
+    with open(series_file_path) as f:
+        parsed_json_file = json.load(f)
+
+    dataframe = {}
+    for f in parsed_json_file.keys():
+        dataframe[f] = parsed_json_file[f]["data"]
+
+    return pl.DataFrame(dataframe)

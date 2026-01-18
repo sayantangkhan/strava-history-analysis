@@ -10,14 +10,17 @@ from stravalib_wrapper import initialize_client
 import json
 
 
-def initialize_db_from_strava_dump():
-    strava_supplied_dataset = pl.read_csv(os.path.join("fit_files", "activities.csv"))
+def initialize_db_from_strava_dump(root_path="./"):
+    strava_supplied_dataset = pl.read_csv(
+        os.path.join(root_path, "fit_files", "activities.csv")
+    )
 
     base_spine = [
         pl.col("Activity ID"),
         pl.col("Activity Date")
         .str.to_datetime("%b %-d, %Y, %-I:%M:%S %p")
         .dt.replace_time_zone("UTC"),
+        pl.col("Activity Type"),
         (pl.lit("fit_files/") + pl.col("Filename").str.strip_suffix(".gz")).alias(
             "Filename"
         ),
@@ -28,7 +31,7 @@ def initialize_db_from_strava_dump():
     return strava_supplied_dataset.select(base_spine).filter(fit_filter)
 
 
-def update_spine_with_api_pull(df: pl.DataFrame) -> pl.DataFrame:
+def update_spine_with_api_pull(df: pl.DataFrame, root_path="./") -> pl.DataFrame:
     """
     Docstring for update_spine_with_api_pull
 
@@ -41,7 +44,7 @@ def update_spine_with_api_pull(df: pl.DataFrame) -> pl.DataFrame:
     """
     last_seen_id = df["Activity ID"][-1]
 
-    client = initialize_client()
+    client = initialize_client(root_path=root_path)
     unseen_ids = []
     datetimes = []
     timeseries_data = []
@@ -60,10 +63,16 @@ def update_spine_with_api_pull(df: pl.DataFrame) -> pl.DataFrame:
         timeseries_data.append(activity_stream)
 
     for activity_id, stream in zip(unseen_ids, timeseries_data):
-        json_path = os.path.join("fit_files", "api_series_pulls", f"{activity_id}.json")
+        json_path_no_prefix = os.path.join(
+            "fit_files", "api_series_pulls", f"{activity_id}.json"
+        )
+
+        json_path = os.path.join(
+            root_path, "fit_files", "api_series_pulls", f"{activity_id}.json"
+        )
         with open(json_path, "w") as f:
             json.dump(stream, f)
-            paths.append(json_path)
+            paths.append(json_path_no_prefix)
 
     new_df = pl.DataFrame(
         {
@@ -79,20 +88,20 @@ def update_spine_with_api_pull(df: pl.DataFrame) -> pl.DataFrame:
     return df
 
 
-def get_spine():
+def get_spine(root_path="./"):
     """
     Docstring for get_spine
 
     First it checks local cache for the spine db. If it doesn't exist, it creates it from the csv
     """
-    cached_df_path = os.path.join("database", "spine.parquet")
+    cached_df_path = os.path.join(root_path, "database", "spine.parquet")
     if os.path.exists(cached_df_path):
         df = pl.read_parquet(cached_df_path)
-        df = update_spine_with_api_pull(df)
+        df = update_spine_with_api_pull(df, root_path=root_path)
         df.write_parquet(cached_df_path)
     else:
-        df = initialize_db_from_strava_dump()
-        df = update_spine_with_api_pull(df)
+        df = initialize_db_from_strava_dump(root_path=root_path)
+        df = update_spine_with_api_pull(df, root_path=root_path)
         df.write_parquet(cached_df_path)
 
     return df

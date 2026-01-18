@@ -5,8 +5,8 @@ from datetime import datetime
 from stravalib import Client
 
 
-def initialize_client() -> Client:
-    token_path = os.path.join("secrets", "token.json")
+def initialize_client(root_path="./") -> Client:
+    token_path = os.path.join(root_path, "secrets", "token.json")
 
     ## Load the stored credentials
     with open(token_path, "r") as f:
@@ -16,7 +16,7 @@ def initialize_client() -> Client:
     current_timestamp = int(datetime.now().timestamp())
     if current_timestamp >= token_refresh["expires_at"]:
         ## We use the secret and refresh token to get new access token
-        auth_path = os.path.join("secrets", "authentication.json")
+        auth_path = os.path.join(root_path, "secrets", "authentication.json")
         with open(auth_path) as f:
             auth_details = json.load(f)
         client = Client()
