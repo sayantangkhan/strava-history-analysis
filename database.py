@@ -21,6 +21,17 @@ def initialize_db_from_strava_dump(root_path="./"):
         .str.to_datetime("%b %-d, %Y, %-I:%M:%S %p")
         .dt.replace_time_zone("UTC"),
         pl.col("Activity Type"),
+        pl.col("Activity Name"),
+        pl.col("Activity Gear"),
+        pl.col("Commute"),
+        pl.col("Elapsed Time").cast(pl.Int64),
+        pl.col("Moving Time").cast(pl.Int64),
+        pl.col("Distance").cast(pl.Float64),
+        pl.col("Average Speed").cast(pl.Float64),
+        pl.col("Elevation Gain").cast(pl.Float64),
+        pl.col("Average Heart Rate").cast(pl.Float64),
+        pl.col("Max Heart Rate").cast(pl.Float64),
+        pl.col("Average Cadence").cast(pl.Float64),
         (pl.lit("fit_files/") + pl.col("Filename").str.strip_suffix(".gz")).alias(
             "Filename"
         ),
@@ -51,6 +62,18 @@ def update_spine_with_api_pull(df: pl.DataFrame, root_path="./") -> pl.DataFrame
     activity_type = []
     paths = []
 
+    activity_names = []
+    activity_gear = []
+    is_commute = []
+    elapsed_time = []
+    moving_time = []
+    distance = []
+    average_speed = []
+    elevation_gain = []
+    average_heart_rate = []
+    max_heart_rate = []
+    average_cadence = []
+
     for activity in client.get_activities():
         activity_id = activity.id
         if activity_id <= last_seen_id:
@@ -58,9 +81,23 @@ def update_spine_with_api_pull(df: pl.DataFrame, root_path="./") -> pl.DataFrame
         unseen_ids.append(activity_id)
         datetimes.append(activity.start_date)
         activity_type.append(activity.type.root)
+        # Polling strava for the time series data associated to the activity
         activity_stream = client.get_activity_streams(activity_id)
         activity_stream = {k: v.model_dump() for k, v in activity_stream.items()}
         timeseries_data.append(activity_stream)
+        # Now polling it for the usual metadata associated to the activity
+        metadata = client.get_activity(activity_id).model_dump()
+        activity_names.append(metadata["name"])
+        activity_gear.append(metadata["gear"]["name"])
+        is_commute.append(metadata["commute"])
+        elapsed_time.append(metadata["elapsed_time"])
+        moving_time.append(metadata["moving_time"])
+        distance.append(metadata["distance"])
+        average_speed.append(metadata["average_speed"])
+        elevation_gain.append(metadata["total_elevation_gain"])
+        average_heart_rate.append(metadata["average_heartrate"])
+        max_heart_rate.append(metadata["max_heartrate"])
+        average_cadence.append(metadata["average_cadence"])
 
     for activity_id, stream in zip(unseen_ids, timeseries_data):
         json_path_no_prefix = os.path.join(
@@ -79,8 +116,37 @@ def update_spine_with_api_pull(df: pl.DataFrame, root_path="./") -> pl.DataFrame
             "Activity ID": reversed(unseen_ids),
             "Activity Date": reversed(datetimes),
             "Activity Type": reversed(activity_type),
+            "Activity Name": reversed(activity_names),
+            "Activity Gear": reversed(activity_gear),
+            "Commute": reversed(is_commute),
+            "Elapsed Time": reversed(elapsed_time),
+            "Moving Time": reversed(moving_time),
+            "Distance": reversed(distance),
+            "Average Speed": reversed(average_speed),
+            "Elevation Gain": reversed(elevation_gain),
+            "Average Heart Rate": reversed(average_heart_rate),
+            "Max Heart Rate": reversed(max_heart_rate),
+            "Average Cadence": reversed(average_cadence),
             "Filename": reversed(paths),
         }
+    )
+
+    new_df = new_df.select(
+        pl.col("Activity ID"),
+        pl.col("Activity Date"),
+        pl.col("Activity Type"),
+        pl.col("Activity Name"),
+        pl.col("Activity Gear"),
+        pl.col("Commute"),
+        pl.col("Elapsed Time").cast(pl.Int64),
+        pl.col("Moving Time").cast(pl.Int64),
+        pl.col("Distance").cast(pl.Float64),
+        pl.col("Average Speed").cast(pl.Float64),
+        pl.col("Elevation Gain").cast(pl.Float64),
+        pl.col("Average Heart Rate").cast(pl.Float64),
+        pl.col("Max Heart Rate").cast(pl.Float64),
+        pl.col("Average Cadence").cast(pl.Float64),
+        pl.col("Filename"),
     )
 
     df = pl.concat([df, new_df])
