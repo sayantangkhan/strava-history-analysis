@@ -38,7 +38,7 @@ def parse_fit_file(fit_file_path: str) -> pl.DataFrame:
             value = f["value"]
 
             # If this field is something we've not seen before, we populate it with None values until this point
-            if not combined_name in dataframe.keys():
+            if combined_name not in dataframe:
                 dataframe[combined_name] = [None] * index
             dataframe[combined_name].append(value)
         for _, v in dataframe.items():

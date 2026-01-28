@@ -53,7 +53,7 @@ def update_spine_with_api_pull(df: pl.DataFrame, root_path="./") -> pl.DataFrame
 
     This function relies on the Activity ID being sorted in the DataFrame
     """
-    last_seen_id = df["Activity ID"][-1]
+    last_seen_id = df["Activity ID"].last()
 
     client = initialize_client(root_path=root_path)
     unseen_ids = []
@@ -113,31 +113,25 @@ def update_spine_with_api_pull(df: pl.DataFrame, root_path="./") -> pl.DataFrame
 
     new_df = pl.DataFrame(
         {
-            "Activity ID": reversed(unseen_ids),
-            "Activity Date": reversed(datetimes),
-            "Activity Type": reversed(activity_type),
-            "Activity Name": reversed(activity_names),
-            "Activity Gear": reversed(activity_gear),
-            "Commute": reversed(is_commute),
-            "Elapsed Time": reversed(elapsed_time),
-            "Moving Time": reversed(moving_time),
-            "Distance": reversed(distance),
-            "Average Speed": reversed(average_speed),
-            "Elevation Gain": reversed(elevation_gain),
-            "Average Heart Rate": reversed(average_heart_rate),
-            "Max Heart Rate": reversed(max_heart_rate),
-            "Average Cadence": reversed(average_cadence),
-            "Filename": reversed(paths),
+            "Activity ID": unseen_ids,
+            "Activity Date": datetimes,
+            "Activity Type": activity_type,
+            "Activity Name": activity_names,
+            "Activity Gear": activity_gear,
+            "Commute": is_commute,
+            "Elapsed Time": elapsed_time,
+            "Moving Time": moving_time,
+            "Distance": distance,
+            "Average Speed": average_speed,
+            "Elevation Gain": elevation_gain,
+            "Average Heart Rate": average_heart_rate,
+            "Max Heart Rate": max_heart_rate,
+            "Average Cadence": average_cadence,
+            "Filename": paths,
         }
-    )
+    ).reverse()
 
-    new_df = new_df.select(
-        pl.col("Activity ID"),
-        pl.col("Activity Date"),
-        pl.col("Activity Type"),
-        pl.col("Activity Name"),
-        pl.col("Activity Gear"),
-        pl.col("Commute"),
+    new_df = new_df.with_columns(
         pl.col("Elapsed Time").cast(pl.Int64),
         pl.col("Moving Time").cast(pl.Int64),
         pl.col("Distance").cast(pl.Float64) / 1e3,
@@ -146,7 +140,6 @@ def update_spine_with_api_pull(df: pl.DataFrame, root_path="./") -> pl.DataFrame
         pl.col("Average Heart Rate").cast(pl.Float64),
         pl.col("Max Heart Rate").cast(pl.Float64),
         pl.col("Average Cadence").cast(pl.Float64),
-        pl.col("Filename"),
     )
 
     df = pl.concat([df, new_df])
