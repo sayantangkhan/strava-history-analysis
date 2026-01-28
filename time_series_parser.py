@@ -7,6 +7,7 @@ The common format will be a polars DataFrame.
 
 import fitparse
 import json
+import os
 import polars as pl
 
 # Listing out fields from the fit file I want to ignore for now
@@ -81,3 +82,40 @@ def parse_strava_series(series_file_path: str) -> pl.DataFrame:
         dataframe[f] = parsed_json_file[f]["data"]
 
     return pl.DataFrame(dataframe)
+
+
+def get_time_series(file_path: str, root_path: str = "./") -> pl.DataFrame:
+    """
+    Returns the time series data for an activity, using a parquet cache to avoid re-parsing.
+
+    :param file_path: Relative path to the source file (e.g., "fit_files/123.fit")
+    :param root_path: Root directory of the project
+    :return: Parsed time series as a DataFrame
+    """
+    full_source_path = os.path.join(root_path, file_path)
+
+    # Derive cache path: fit_files/foo.fit -> cache/foo_fit.parquet
+    #                    fit_files/foo.json -> cache/foo_json.parquet
+    if file_path.endswith(".fit"):
+        cache_relative = file_path.replace("fit_files/", "cache/").replace(
+            ".fit", "_fit.parquet"
+        )
+    else:
+        cache_relative = file_path.replace("fit_files/", "cache/").replace(
+            ".json", "_json.parquet"
+        )
+
+    cache_path = os.path.join(root_path, cache_relative)
+
+    if os.path.exists(cache_path):
+        return pl.read_parquet(cache_path)
+
+    # Parse based on file type
+    if file_path.endswith(".fit"):
+        df = parse_fit_file(full_source_path)
+    else:
+        df = parse_strava_series(full_source_path)
+
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    df.write_parquet(cache_path)
+    return df

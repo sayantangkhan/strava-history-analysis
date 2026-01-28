@@ -11,4 +11,5 @@ wheels/
 /secrets/
 /fit_files/
 /database/
+/cache/
 /notebooks/.ipynb_checkpoints/

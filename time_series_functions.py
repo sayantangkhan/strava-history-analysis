@@ -50,6 +50,16 @@ def strava_api_power_adapter(df: pl.DataFrame) -> pl.DataFrame:
     )
 
 
+def general_power_adapter(df: pl.DataFrame, moving_speed_threshold=1.5) -> pl.DataFrame:
+    # Uses one of the two power adapter functions based on whether the dataframe
+    # comes from a fit file or a strava api pull
+    if "moving" in df:
+        # Comes from strava api pull
+        return strava_api_power_adapter(df)
+    else:
+        return fit_power_adapter(df, moving_speed_threshold=moving_speed_threshold)
+
+
 # Analytics
 
 
