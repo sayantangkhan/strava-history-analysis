@@ -94,12 +94,17 @@ def get_time_series(file_path: str, root_path: str = "./") -> pl.DataFrame:
     """
     full_source_path = os.path.join(root_path, file_path)
 
-    # Derive cache path: fit_files/foo.fit -> cache/foo.parquet
-    cache_relative = (
-        file_path.replace("fit_files/", "cache/")
-        .replace(".fit", ".parquet")
-        .replace(".json", ".parquet")
-    )
+    # Derive cache path: fit_files/foo.fit -> cache/foo_fit.parquet
+    #                    fit_files/foo.json -> cache/foo_json.parquet
+    if file_path.endswith(".fit"):
+        cache_relative = file_path.replace("fit_files/", "cache/").replace(
+            ".fit", "_fit.parquet"
+        )
+    else:
+        cache_relative = file_path.replace("fit_files/", "cache/").replace(
+            ".json", "_json.parquet"
+        )
+
     cache_path = os.path.join(root_path, cache_relative)
 
     if os.path.exists(cache_path):
