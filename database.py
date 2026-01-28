@@ -140,7 +140,7 @@ def update_spine_with_api_pull(df: pl.DataFrame, root_path="./") -> pl.DataFrame
         pl.col("Commute"),
         pl.col("Elapsed Time").cast(pl.Int64),
         pl.col("Moving Time").cast(pl.Int64),
-        pl.col("Distance").cast(pl.Float64),
+        pl.col("Distance").cast(pl.Float64) / 1e3,
         pl.col("Average Speed").cast(pl.Float64),
         pl.col("Elevation Gain").cast(pl.Float64),
         pl.col("Average Heart Rate").cast(pl.Float64),

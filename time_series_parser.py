@@ -9,6 +9,11 @@ import fitparse
 import json
 import polars as pl
 
+# Listing out fields from the fit file I want to ignore for now
+FIT_FILE_FIELDS_TO_IGNORE = {
+    "left_right_balance (None)",
+}
+
 
 def parse_fit_file(fit_file_path: str) -> pl.DataFrame:
     """
@@ -41,6 +46,24 @@ def parse_fit_file(fit_file_path: str) -> pl.DataFrame:
             # If so, we populate with None, and hope polars knows how to deal with it
             if len(v) < index + 1:
                 v.append(None)
+
+    # Some of the fields are recorded at 2x the frequency, but with null values for half the recordings
+    # we filter those out. It's unclear if it's the even or odd values recordings with the true values.
+    true_length = len(dataframe["timestamp (None)"])
+    for k, v in dataframe.items():
+        if len(v) == 2 * true_length:
+            v_prime = [r for (i, r) in enumerate(v) if i % 2 == 0]
+            v_prime_prime = [r for (i, r) in enumerate(v) if i % 2 == 1]
+            if all(r is None for r in v_prime):
+                dataframe[k] = v_prime_prime
+            elif all(r is None for r in v_prime_prime):
+                dataframe[k] = v_prime
+            else:
+                raise ValueError("Both even and odd substreams had values")
+
+    fields_to_remove = FIT_FILE_FIELDS_TO_IGNORE.intersection(dataframe.keys())
+    for f in fields_to_remove:
+        del dataframe[f]
 
     return pl.DataFrame(dataframe)
 
