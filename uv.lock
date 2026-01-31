@@ -2450,13 +2450,14 @@ wheels = [
 [[package]]
 name = "strava-history-analysis"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "fitparse" },
     { name = "ipython" },
     { name = "jupyter" },
     { name = "marimo" },
     { name = "matplotlib" },
+    { name = "numpy" },
     { name = "polars" },
     { name = "ruff" },
     { name = "stravalib" },
@@ -2469,6 +2470,7 @@ requires-dist = [
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "marimo", specifier = ">=0.19.7" },
     { name = "matplotlib", specifier = ">=3.10.8" },
+    { name = "numpy", specifier = ">=1.24.0" },
     { name = "polars", specifier = ">=1.36.1" },
     { name = "ruff", specifier = ">=0.14.14" },
     { name = "stravalib", specifier = ">=2.4" },

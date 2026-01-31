@@ -6,7 +6,7 @@ This module contains the basic functions we will use to create/update the databa
 
 import polars as pl
 import os
-from stravalib_wrapper import initialize_client
+from .stravalib_wrapper import initialize_client
 import json
 
 
