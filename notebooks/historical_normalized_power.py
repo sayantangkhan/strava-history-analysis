@@ -39,7 +39,7 @@ def _():
 
 @app.cell
 def _(get_spine):
-    df = get_spine(root_path="./", poll_strava=False)
+    df = get_spine(root_path="./", poll_strava=True)
     return (df,)
 
 
@@ -108,7 +108,7 @@ def _(compute_normalized_power, compute_peak_normalized_power, df, pl):
 
 @app.cell
 def _(dfnp):
-    dfnp.sample(10)
+    dfnp.tail(10)
     return
 
 
