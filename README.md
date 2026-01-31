@@ -7,6 +7,17 @@ This is a hobby project that I am using to satisfy several needs at once.
 3. Build a simple power pacing calculator for my really long rides, especially if the rides are longer than anything I've done in the past (details on that below). 
 4. An excuse to use Polars, and do quant like work on my own data (as opposed to data at work).
 
+## How to use, and examples
+
+I will add more details on how to get historical strava data, and set up a Strava api client to pull any new activities later,
+but the rough outline is something like this.
+
+1. Set up the strava client (needs creation of a Strava application on the user side, and downloading some secret tokens).
+2. Download a dump of historical Strava data: this is necessary since the API is rate limited, and place it in the appropriate location.
+3. Once the above two steps are done, the `get_spine` function to `database.py` will do the rest of the work, namely pulling in new activities, populating the cache, etc.
+4. With the main spine populated, the user can write their custom analysis functions that compute scalar values they care about from each activity, e.g. Normalized power, peak 1h normalized power, Power/HR drift, etc. The notebooks have a few examples of these.
+
+As an example, here's a chart of my peak 1H normalized power over the last few years, grouped by the bike I did the ride on (the size of the dot indicates the ride length).
 
 ## Pacing calculator
 
