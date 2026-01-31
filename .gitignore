@@ -13,3 +13,4 @@ wheels/
 /database/
 /cache/
 /notebooks/.ipynb_checkpoints/
+/notebooks/__marimo__/

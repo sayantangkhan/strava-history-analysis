@@ -147,18 +147,22 @@ def update_spine_with_api_pull(df: pl.DataFrame, root_path="./") -> pl.DataFrame
     return df
 
 
-def get_spine(root_path="./"):
+def get_spine(root_path="./", poll_strava=True):
     """
     Docstring for get_spine
 
-    First it checks local cache for the spine db. If it doesn't exist, it creates it from the csv
+    First it checks local cache for the spine db. If it doesn't exist, it creates it from the csv.
+    If poll_strava is False, it just returns to locally cached parquet file.
     """
     cached_df_path = os.path.join(root_path, "database", "spine.parquet")
     if os.path.exists(cached_df_path):
         df = pl.read_parquet(cached_df_path)
-        df = update_spine_with_api_pull(df, root_path=root_path)
-        df.write_parquet(cached_df_path)
+        if poll_strava:
+            df = update_spine_with_api_pull(df, root_path=root_path)
+            df.write_parquet(cached_df_path)
     else:
+        if not poll_strava:
+            raise ValueError("Cannot initialize db without polling Strava")
         df = initialize_db_from_strava_dump(root_path=root_path)
         df = update_spine_with_api_pull(df, root_path=root_path)
         df.write_parquet(cached_df_path)
