@@ -8,7 +8,7 @@ to be added to the main spine.
 import polars as pl
 from typing import List
 import numpy as np
-from time_series_parser import get_time_series
+from .time_series_parser import get_time_series
 
 
 def compute_peak_normalized_power(duration_seconds, filename, root_path) -> np.float64:

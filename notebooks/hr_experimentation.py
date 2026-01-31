@@ -8,22 +8,16 @@ app = marimo.App(width="full", app_title="Rolling peak HR")
 def _():
     import marimo as mo
 
-    import sys
-    import os
-
-    sys.path.append(os.getcwd())
-
     import polars as pl
     import matplotlib.pyplot as plt
+    import numpy as np
 
-    from database import get_spine
-    from time_series_parser import get_time_series
-    from time_series_functions import (
+    from strava_history_analysis import get_spine, get_time_series
+    from strava_history_analysis.time_series_functions import (
         general_hr_adapter,
         peak_rolling_hr,
     )
 
-    import numpy as np
     return (
         general_hr_adapter,
         get_spine,
