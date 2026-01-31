@@ -7,13 +7,36 @@ to be added to the main spine.
 
 import polars as pl
 from typing import List
+import numpy as np
+from time_series_parser import get_time_series
+
+
+def compute_peak_normalized_power(duration_seconds, filename, root_path) -> np.float64:
+    try:
+        ts_df = general_power_adapter(
+            get_time_series(file_path=filename, root_path=root_path)
+        )
+        return (ts_df.select(peak_normalized_power(duration_seconds)))[
+            "Peak normalized power"
+        ][0]
+    except pl.exceptions.ColumnNotFoundError:
+        return None
+
+
+# This is a dictionary where the keys are the names of
+# the fields we will use in our code, and the values are 2-tuples,
+# the first element of which is what the field is called in the garmin fit
+# and the second element is what it's called strava data.
+FIELD_NAME_MAPPINGS = {
+    "power": ("power (watts)", "watts"),
+    "heartrate": ("heart_rate (bpm)", "heartrate"),
+}
 
 
 ## The various field adapters go in here
-
-
-# Power
-def fit_power_adapter(df: pl.DataFrame, moving_speed_threshold=1.5) -> pl.DataFrame:
+def fit_adapter(
+    fields: List[str], df: pl.DataFrame, moving_speed_threshold: float = 1.5
+):
     speed = df.get_column(
         "speed (m/s)", default=pl.repeat(0.0, df.shape[0], dtype=pl.Float64)
     )
@@ -25,28 +48,77 @@ def fit_power_adapter(df: pl.DataFrame, moving_speed_threshold=1.5) -> pl.DataFr
         enhanced_speed >= moving_speed_threshold
     )
 
-    return df.select(
-        [
-            (pl.col("timestamp (None)") - pl.col("timestamp (None)").first()).alias(
-                "duration"
-            ),
-            pl.col("power (watts)").fill_null(strategy="zero").alias("power"),
-            (fIsMoving).alias("fIsMoving"),
-        ]
+    selectors = []
+    selectors.append(
+        (pl.col("timestamp (None)") - pl.col("timestamp (None)").first()).alias(
+            "duration"
+        )
+    )
+    for f in fields:
+        selectors.append(
+            pl.col(FIELD_NAME_MAPPINGS[f][0])
+            .cast(pl.Float64)
+            .fill_null(strategy="zero")
+            .alias(f)
+        )
+
+    selectors.append((fIsMoving).alias("fIsMoving"))
+
+    return df.select(selectors)
+
+
+def strava_api_adapter(fields: List[str], df: pl.DataFrame):
+    selectors = []
+    selectors.append(
+        (pl.duration(seconds=(pl.col("time") - pl.col("time").first()))).alias(
+            "duration"
+        )
+    )
+
+    for f in fields:
+        selectors.append(
+            pl.col(FIELD_NAME_MAPPINGS[f][1])
+            .cast(pl.Float64)
+            .fill_null(strategy="zero")
+            .alias(f)
+        )
+
+    selectors.append(
+        (pl.col("moving")).alias("fIsMoving"),
+    )
+
+    return df.select(selectors)
+
+
+# Power
+def fit_power_adapter(df: pl.DataFrame, moving_speed_threshold=1.5) -> pl.DataFrame:
+    return fit_adapter(
+        ["power"],
+        df,
+        moving_speed_threshold,
     )
 
 
 def strava_api_power_adapter(df: pl.DataFrame) -> pl.DataFrame:
-    return df.select(
-        [
-            (pl.duration(seconds=(pl.col("time") - pl.col("time").first()))).alias(
-                "duration"
-            ),
-            (pl.col("watts").cast(pl.Float64).fill_null(strategy="zero")).alias(
-                "power"
-            ),
-            (pl.col("moving")).alias("fIsMoving"),
-        ]
+    return strava_api_adapter(
+        ["power"],
+        df,
+    )
+
+
+# HR
+def fit_hr_adapter(df: pl.DataFrame, moving_speed_threshold=1.5) -> pl.DataFrame:
+    return fit_adapter(
+        ["heartrate"],
+        df,
+        moving_speed_threshold,
+    )
+
+
+def strava_api_hr_adapter(df: pl.DataFrame) -> pl.DataFrame:
+    return strava_api_adapter(
+        ["heartrate"],
+        df,
     )
 
 
@@ -60,6 +132,17 @@ def general_power_adapter(df: pl.DataFrame, moving_speed_threshold=1.5) -> pl.Da
         return fit_power_adapter(df, moving_speed_threshold=moving_speed_threshold)
 
 
+def general_hr_adapter(df: pl.DataFrame, moving_speed_threshold=1.5) -> pl.DataFrame:
+    # Uses one of the two power adapter functions based on whether the dataframe
+    # comes from a fit file or a strava api pull
+    if "moving" in df:
+        # Comes from strava api pull
+        return strava_api_hr_adapter(df)
+    else:
+        return fit_hr_adapter(df, moving_speed_threshold=moving_speed_threshold)
+
+
+# TODO: Make this more general
 def fill_duration_gaps(df: pl.DataFrame) -> pl.DataFrame:
     """
     Takes a dataframe with duration, power, and fIsMoving columns and returns
@@ -98,16 +181,18 @@ def fill_duration_gaps(df: pl.DataFrame) -> pl.DataFrame:
 def normalized_power() -> List[pl.Expr]:
     thirty_second_average = pl.col("power").rolling_mean(30).alias("30s average")
     l4_norm = ((thirty_second_average**4).mean() ** 0.25).alias("Normalized power")
-    return [
-        thirty_second_average,
-        l4_norm,
-    ]
+    return l4_norm
 
 
 def peak_normalized_power(duration_seconds: int) -> pl.Expr:
     thirty_second_average = pl.col("power").rolling_mean(30).alias("30s average")
-    l4_norm = (
-        (thirty_second_average**4).rolling_mean(duration_seconds) ** 0.25
-    ).alias("Normalized power")
+    l4_norm = ((thirty_second_average**4).rolling_mean(duration_seconds) ** 0.25).alias(
+        "Normalized power"
+    )
     peak_np = l4_norm.max().alias("Peak normalized power")
     return peak_np
+
+
+def peak_rolling_hr(duration_seconds: int) -> pl.Expr:
+    n_second_average = pl.col("heartrate").rolling_mean(duration_seconds)
+    return n_second_average.max().alias(f"Peak {duration_seconds}s HR")

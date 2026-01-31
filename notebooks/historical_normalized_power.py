@@ -29,12 +29,26 @@ def _():
         general_power_adapter,
         get_spine,
         get_time_series,
+        mo,
         normalized_power,
         np,
         peak_normalized_power,
         pl,
         plt,
     )
+
+
+@app.cell
+def _(mo):
+    mo.md("""
+    # Outline of the historical normalized power notebook
+
+    1. We load the full dataset
+    2. We then define the various power related metrics we want to compute for each activity
+    3. Then we augment the `df` dataframe by adding those columns via a `map_elements`.
+    4. And then we filter to the set we care about, and plot the data.
+    """)
+    return
 
 
 @app.cell
@@ -119,13 +133,15 @@ def _(pl):
         & (pl.col("Peak 1h normalized power").is_finite())
         & (pl.col("Distance") >= 30)
     )
-    return (f_valid,)
+
+    f_real_gear = pl.col("Activity Gear").is_not_null()
+    return f_real_gear, f_valid
 
 
 @app.cell
-def _(dfnp, f_valid):
+def _(dfnp, f_real_gear, f_valid):
     bikes = (
-        dfnp.filter(f_valid)["Activity Gear"]
+        dfnp.filter(f_valid & f_real_gear)["Activity Gear"]
         .value_counts()
         .sort("count", descending=True)
     )
@@ -147,7 +163,7 @@ def _(bikes, dfnp, f_valid, pl, plt):
         "*",
         "x",
         "d",
-        "s",
+        # "s",
     ]
 
     plt.figure(figsize=(20, 10))
@@ -171,6 +187,11 @@ def _(bikes, dfnp, f_valid, pl, plt):
     plt.grid()
 
     plt.gca()
+    return
+
+
+@app.cell
+def _():
     return
 
 
