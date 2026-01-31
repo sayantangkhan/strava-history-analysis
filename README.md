@@ -19,6 +19,8 @@ but the rough outline is something like this.
 
 As an example, here's a chart of my peak 1H normalized power over the last few years, grouped by the bike I did the ride on (the size of the dot indicates the ride length).
 
+![Peak 1H Normalized Power](notebooks/NP1H.png)
+
 ## Pacing calculator
 
 The key idea here is to maintain an internal power-duration curve that is constantly updating, across the time axis
