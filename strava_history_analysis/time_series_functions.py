@@ -12,13 +12,33 @@ from .time_series_parser import get_time_series
 
 
 def compute_peak_normalized_power(duration_seconds, filename, root_path) -> np.float64:
+    f = peak_normalized_power(duration_seconds)
+    return compute_power_functional(f, filename, root_path)
+
+
+def compute_peak_average_power(duration_seconds, filename, root_path) -> np.float64:
+    f = peak_average_power(duration_seconds)
+    return compute_power_functional(f, filename, root_path)
+
+
+def compute_average_power(filename, root_path) -> np.float64:
+    return compute_power_functional(average_power(), filename, root_path)
+
+
+def compute_normalized_power(filename, root_path) -> np.float64:
+    return compute_power_functional(normalized_power(), filename, root_path)
+
+
+def compute_power_functional(functional, filename, root_path) -> np.float64:
     try:
         ts_df = general_power_adapter(
             get_time_series(file_path=filename, root_path=root_path)
         )
-        return (ts_df.select(peak_normalized_power(duration_seconds)))[
-            "Peak normalized power"
-        ][0]
+
+        res = ts_df.select(functional)
+        colname = res.columns[0]
+
+        return (res)[colname][0]
     except pl.exceptions.ColumnNotFoundError:
         return None
 
@@ -191,6 +211,15 @@ def peak_normalized_power(duration_seconds: int) -> pl.Expr:
     )
     peak_np = l4_norm.max().alias("Peak normalized power")
     return peak_np
+
+
+def peak_average_power(duration_seconds: int) -> pl.Expr:
+    n_second_average = pl.col("power").rolling_mean(duration_seconds)
+    return n_second_average.max().alias(f"Peak {duration_seconds}s power")
+
+
+def average_power() -> pl.Expr:
+    return pl.col("power").mean()
 
 
 def peak_rolling_hr(duration_seconds: int) -> pl.Expr:

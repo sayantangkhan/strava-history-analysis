@@ -8,11 +8,12 @@ dependencies = [
     "fitparse>=1.2.0",
     "ipython>=9.9.0",
     "jupyter>=1.1.1",
-    "marimo>=0.19.7",
+    "marimo>=0.22.0",
     "matplotlib>=3.10.8",
     "numpy>=1.24.0",
     "polars>=1.36.1",
     "ruff>=0.14.14",
+    "scipy>=1.17.1",
     "stravalib>=2.4",
 ]
 

@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.19.7"
+__generated_with = "0.22.4"
 app = marimo.App(width="full", app_title="Historical Normalized Power")
 
 
@@ -84,28 +84,37 @@ def _(
             ][0]
         except pl.exceptions.ColumnNotFoundError:
             return None
+
     return compute_normalized_power, compute_peak_normalized_power
 
 
 @app.cell
+def _(df):
+    df.tail(10)
+    return
+
+
+@app.cell
 def _(compute_normalized_power, compute_peak_normalized_power, df, pl):
+    root_path = "./"
+
     dfnp = df.with_columns(
         [
             pl.col("Filename")
             .map_elements(
-                lambda f: compute_normalized_power(f, "./"),
+                lambda f: compute_normalized_power(f, root_path),
                 return_dtype=pl.Float64,
             )
             .alias("Normalized power"),
             pl.col("Filename")
             .map_elements(
-                lambda f: compute_peak_normalized_power(3600, f, "./"),
+                lambda f: compute_peak_normalized_power(3600, f, root_path),
                 return_dtype=pl.Float64,
             )
             .alias("Peak 1h normalized power"),
             pl.col("Filename")
             .map_elements(
-                lambda f: compute_peak_normalized_power(7200, f, "./"),
+                lambda f: compute_peak_normalized_power(7200, f, root_path),
                 return_dtype=pl.Float64,
             )
             .alias("Peak 2h normalized power"),

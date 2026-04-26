@@ -1,12 +1,12 @@
 import marimo
 
-__generated_with = "0.19.7"
+__generated_with = "0.19.9"
 app = marimo.App(width="full", app_title="Rolling peak HR")
 
 
 @app.cell
 def _():
-    import marimo as mo
+    import marimo as mo  # noqa: F401
 
     import polars as pl
     import matplotlib.pyplot as plt
@@ -23,7 +23,6 @@ def _():
         get_spine,
         get_time_series,
         mo,
-        np,
         peak_rolling_hr,
         pl,
         plt,
@@ -45,20 +44,21 @@ def _(mo):
 
 @app.cell
 def _(get_spine):
-    df = get_spine(root_path="./", poll_strava=False)
+    df = get_spine(root_path="../", poll_strava=True)
     return (df,)
 
 
 @app.cell
-def _(general_hr_adapter, get_time_series, np, peak_rolling_hr, pl):
-    def compute_peak_rolling_hr(filename, root_path) -> np.float64:
+def _(general_hr_adapter, get_time_series, peak_rolling_hr, pl):
+    def compute_peak_rolling_hr(filename, root_path) -> "np.float64":
         try:
             ts_df = general_hr_adapter(
                 get_time_series(file_path=filename, root_path=root_path)
             )
             return (ts_df.select(peak_rolling_hr(60)))["Peak 60s HR"][0]
         except pl.exceptions.ColumnNotFoundError:
-            return None
+            return None  # ty:ignore[invalid-return-type]
+
     return (compute_peak_rolling_hr,)
 
 
@@ -68,7 +68,7 @@ def _(compute_peak_rolling_hr, df, pl):
         [
             pl.col("Filename")
             .map_elements(
-                lambda f: compute_peak_rolling_hr(f, "./"),
+                lambda f: compute_peak_rolling_hr(f, "../"),
                 return_dtype=pl.Float64,
             )
             .alias("Peak 60s HR"),
@@ -85,9 +85,7 @@ def _(dfnp, pl):
 
 @app.cell
 def _(dfnp, pl, plt):
-    f_valid = (pl.col("Elapsed Time") / 3600 >= 0.9) & (
-        pl.col("Peak 60s HR") >= 100
-    )
+    f_valid = (pl.col("Elapsed Time") / 3600 >= 0.9) & (pl.col("Peak 60s HR") >= 100)
 
     plt.figure(figsize=(20, 10))
 
@@ -106,6 +104,11 @@ def _(dfnp, pl, plt):
     plt.grid()
 
     plt.gca()
+    return
+
+
+@app.cell
+def _():
     return
 
 
