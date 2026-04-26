@@ -40,3 +40,11 @@ P(t) = A / (t + τ) + B * t^(-α)
 - **τ** (seconds): Time constant that prevents singularity at t=0 and shapes short-duration behavior
 - **B** (watts × seconds^α): Scaling factor for the aerobic/endurance component
 - **α** (dimensionless): Decay exponent, typically 0.05-0.10
+
+## Project TODOs
+
+- [x] Build updating spine with data from Strava with an easy Polars API
+- [x] Build a pacing model, and fit it on the data from Strava
+- [ ] Turn the pacing model marimo notebook into a usable webapp, and host it on my server
+- [ ] Expose some of the Polars API to an LLM to answer natural language queries
+- [ ] Document more thoroughly the process of setting up this project for a new Strava user
