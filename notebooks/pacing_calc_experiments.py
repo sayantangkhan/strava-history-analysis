@@ -163,21 +163,31 @@ def _():
 def _(np):
     # Initial estimates
     anaerobic_power = 373
-    tau = 0.4939
-    alpha = 0.060858
+    tau = 0.6
+    alpha = 0.054
     watts_scaling_factor = 224
     cov = np.diag([100**2, 30**2])
-    return alpha, anaerobic_power, cov, tau, watts_scaling_factor
+    stickiness = 58
+    return alpha, anaerobic_power, cov, stickiness, tau, watts_scaling_factor
 
 
 @app.cell
-def _(PacingModel, alpha, anaerobic_power, cov, tau, watts_scaling_factor):
+def _(
+    PacingModel,
+    alpha,
+    anaerobic_power,
+    cov,
+    stickiness,
+    tau,
+    watts_scaling_factor,
+):
     baseline_model = PacingModel(
         anaerobic_work=anaerobic_power,
         watts_scaling_factor=watts_scaling_factor,
         covariance_matrix=cov,
         tau=tau,
-        alpha=alpha
+        alpha=alpha,
+        stickiness=stickiness,
     )
     return (baseline_model,)
 
@@ -262,7 +272,7 @@ def _(baseline_model):
 
 @app.cell
 def _(baseline_model):
-    baseline_model.predict_peak_power(60)
+    baseline_model.predict_peak_power(60 * 6)
     return
 
 

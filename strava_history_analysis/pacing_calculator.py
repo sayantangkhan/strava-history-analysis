@@ -51,6 +51,7 @@ class PacingModel:
     ]  # This is the covariance matrix of the the params
     tau: float  # This is a fixed constant as the model gets in more data
     alpha: float  # decay exponent, also fixed
+    stickiness: float  # Relative weights of prior and posterior
 
     def predict_peak_power(
         self,
@@ -72,7 +73,7 @@ class PacingModel:
         censored_observations: List[Tuple[int, float]],
         uncensored_observations: List[Tuple[int, float]],
         noise_floor_A: float = 100.0,  # std of 10 W·min
-        noise_floor_B: float = 25.0,   # std of 5
+        noise_floor_B: float = 25.0,  # std of 5
     ):
         """
         This function takes two lists of pairs of duration and power, one of which are censored observations,
@@ -107,9 +108,11 @@ class PacingModel:
                 params, mean=prior_mean, cov=prior_cov
             )
 
-            return -(ll + 2 * log_prior)
+            return -(ll + self.stickiness * log_prior)
 
         result = minimize(neg_log_posterior, x0=prior_mean, method="BFGS")
 
         self.anaerobic_work, self.watts_scaling_factor = result.x
-        self.covariance_matrix = result.hess_inv + np.diag([noise_floor_A, noise_floor_B])
+        self.covariance_matrix = result.hess_inv + np.diag(
+            [noise_floor_A, noise_floor_B]
+        )
