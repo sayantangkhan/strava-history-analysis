@@ -241,7 +241,7 @@ def _(baseline_model, dfnpf):
         p20s.append(p20)
         p60s.append(p60)
 
-        print(f"5m = {p5}, 20m = {p20}, 60m = {p60}")
+        # print(f"5m = {p5}, 20m = {p20}, 60m = {p60}")
     return p20s, p5s, p60s
 
 
@@ -260,7 +260,7 @@ def _(baseline_model):
 @app.cell
 def _(dfnpf):
     from datetime import datetime, timezone
-    f_recent = dfnpf.get_column("Activity Date") >= datetime(2023, 9, 1, tzinfo=timezone.utc)
+    f_recent = dfnpf.get_column("Activity Date") >= datetime(2024, 3, 1, tzinfo=timezone.utc)
     return (f_recent,)
 
 

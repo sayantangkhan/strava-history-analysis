@@ -1,11 +1,9 @@
 # Strava History Analysis
 
-This is a hobby project that I am using to satisfy several needs at once.
+This is a hobby project that I am using to analyze my cycling data in a more granular manner than Strava (or other applications like Intervals.icu allow).
 
-1. Getting my data out of Strava just in case I no longer wish to use it post its IPO.
-2. Run complex queries over my historical activities: while I can easily see the metrics I care about for each activity individually on Strava, I would like to able to work with the entire dataset as whole, and analyze it in a systematic manner.
-3. Build a simple power pacing calculator for my really long rides, especially if the rides are longer than anything I've done in the past (details on that below). 
-4. An excuse to use Polars, and do quant like work on my own data (as opposed to data at work).
+1. Run complex queries over my historical activities: while I can easily see the metrics I care about for each activity individually on Strava, I would like to able to work with the entire dataset as whole, and analyze it in a systematic manner.
+2. Build a simple power pacing calculator for my really long rides, especially if the rides are longer than anything I've done in the past (details on that below). 
 
 ## How to use, and examples
 
@@ -13,13 +11,18 @@ I will add more details on how to get historical strava data, and set up a Strav
 but the rough outline is something like this.
 
 1. Set up the strava client (needs creation of a Strava application on the user side, and downloading some secret tokens).
-2. Download a dump of historical Strava data: this is necessary since the API is rate limited, and place it in the appropriate location.
+2. Download a dump of historical Strava data: this is necessary since the API is rate limited, and place it in the `fit_files/` directory at the project root.
 3. Once the above two steps are done, the `get_spine` function to `database.py` will do the rest of the work, namely pulling in new activities, populating the cache, etc.
-4. With the main spine populated, the user can write their custom analysis functions that compute scalar values they care about from each activity, e.g. Normalized power, peak 1h normalized power, Power/HR drift, etc. The notebooks have a few examples of these.
+4. With the main spine populated, the user can write their custom analysis functions that compute scalar values they care about from each activity, e.g. Normalized power, peak 1h normalized power, Power/HR drift, etc. The notebooks in the `notebooks/` directory have a few examples of these.
 
 As an example, here's a chart of my peak 1H normalized power over the last few years, grouped by the bike I did the ride on (the size of the dot indicates the ride length).
 
 ![Peak 1H Normalized Power](notebooks/NP1H.png)
+
+And here's an example of how my rudimentary pacing model think my peak 5m power has evolved over time: in paricular, it's using maximal efforts on other durations to estimate this for rides where I may not have been necessarily targeting a 5m power PR.
+
+![Peak 1H Normalized Power](notebooks/5m_power.png)
+
 
 ## Pacing calculator
 
@@ -40,11 +43,3 @@ P(t) = A / (t + τ) + B * t^(-α)
 - **τ** (seconds): Time constant that prevents singularity at t=0 and shapes short-duration behavior
 - **B** (watts × seconds^α): Scaling factor for the aerobic/endurance component
 - **α** (dimensionless): Decay exponent, typically 0.05-0.10
-
-## Project TODOs
-
-- [x] Build updating spine with data from Strava with an easy Polars API
-- [x] Build a pacing model, and fit it on the data from Strava
-- [ ] Turn the pacing model marimo notebook into a usable webapp, and host it on my server
-- [ ] Expose some of the Polars API to an LLM to answer natural language queries
-- [ ] Document more thoroughly the process of setting up this project for a new Strava user
