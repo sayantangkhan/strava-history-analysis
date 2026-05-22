@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.22.4"
+__generated_with = "0.23.7"
 app = marimo.App(width="full", app_title="Historical Normalized Power")
 
 
@@ -134,7 +134,9 @@ def _(pl):
     f_valid = (
         (pl.col("Normalized power") >= 50)
         & (pl.col("Peak 1h normalized power").is_finite())
+        # & (pl.col("Peak 1h normalized power") > 220)
         & (pl.col("Distance") >= 30)
+        & (pl.col("Activity Type") == "Ride")
     )
 
     f_real_gear = pl.col("Activity Gear").is_not_null()
@@ -181,7 +183,7 @@ def _(bikes, dfnp, f_valid, pl, plt):
             alpha=0.6,
         )
 
-    plt.ylim((130, 240))
+    plt.ylim((150, 260))
     plt.legend(loc=2)
 
     plt.xlabel("Date")
@@ -194,7 +196,22 @@ def _(bikes, dfnp, f_valid, pl, plt):
 
 
 @app.cell
-def _():
+def _(mo):
+    mo.md("""
+    ## Looking for examples with really high peak 1h NP.
+    """)
+    return
+
+
+@app.cell
+def _(f_valid, pl):
+    f_high_peak = (pl.col("Peak 1h normalized power") > 230) & (f_valid)
+    return (f_high_peak,)
+
+
+@app.cell
+def _(dfnp, f_high_peak):
+    dfnp.filter(f_high_peak).tail(10)
     return
 
 

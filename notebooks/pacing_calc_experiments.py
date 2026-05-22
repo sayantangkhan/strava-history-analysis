@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.22.4"
+__generated_with = "0.23.7"
 app = marimo.App(width="medium")
 
 
@@ -29,6 +29,7 @@ def _():
         mo,
         np,
         pl,
+        plt,
     )
 
 
@@ -44,8 +45,15 @@ def _(mo):
 
 
 @app.cell
-def _(get_spine, pl):
-    df = get_spine(root_path="./", poll_strava=False).select(
+def _(mo):
+    poll_strava_boolean = mo.ui.switch(value=False, label="Pull latest data from Strava")
+    poll_strava_boolean
+    return (poll_strava_boolean,)
+
+
+@app.cell
+def _(get_spine, pl, poll_strava_boolean):
+    df = get_spine(root_path="./", poll_strava=poll_strava_boolean.value).select(
         [
             pl.col("Activity ID"),
             pl.col("Activity Date"),
@@ -199,42 +207,11 @@ def _(baseline_model):
 
 
 @app.cell
-def _():
-    # activity = list(dfnpf.iter_rows(named=True))[0]
-    # print(baseline_model)
-    # censored_observations = []
-    # uncensored_observations = []
-
-    # censored_observations.append((5, activity['Peak 5m average power']))
-    # censored_observations.append((10, activity['Peak 10m average power']))
-    # censored_observations.append((20, activity['Peak 20m average power']))
-    # censored_observations.append((60, activity['Peak 60m average power']))
-    # censored_observations.append((120, activity['Peak 120m average power']))
-
-    # uncensored_observations.append((60, activity['Peak 1h normalized power']))
-    # uncensored_observations.append((120, activity['Peak 2h normalized power']))
-    # # uncensored_observations.append((activity["Moving Time"] / 60, activity['Average power']))
-
-    # censored_observations = list(filter(lambda f: f[1] is not None, censored_observations))
-    # uncensored_observations = list(filter(lambda f: f[1] is not None, uncensored_observations))
-
-    # print("Censored")
-    # print((censored_observations))
-
-    # print("Uncensored")
-    # print((uncensored_observations))
-
-    # baseline_model.update_based_on_observations(
-    #     censored_observations,
-    #     uncensored_observations
-    # )
-
-    # print(baseline_model)
-    return
-
-
-@app.cell
 def _(baseline_model, dfnpf):
+    p5s = []
+    p20s = []
+    p60s = []
+
     for activity in dfnpf.iter_rows(named=True):
         censored_observations = []
         uncensored_observations = []
@@ -260,8 +237,12 @@ def _(baseline_model, dfnpf):
         p20 = baseline_model.predict_peak_power(20)
         p60 = baseline_model.predict_peak_power(60)
 
+        p5s.append(p5)
+        p20s.append(p20)
+        p60s.append(p60)
+
         print(f"5m = {p5}, 20m = {p20}, 60m = {p60}")
-    return
+    return p20s, p5s, p60s
 
 
 @app.cell
@@ -272,13 +253,48 @@ def _(baseline_model):
 
 @app.cell
 def _(baseline_model):
-    baseline_model.predict_peak_power(60 * 6)
+    baseline_model.predict_peak_power(60 * 17)
     return
 
 
 @app.cell
 def _(dfnpf):
-    dfnpf
+    from datetime import datetime, timezone
+    f_recent = dfnpf.get_column("Activity Date") >= datetime(2023, 9, 1, tzinfo=timezone.utc)
+    return (f_recent,)
+
+
+@app.cell
+def _(dfnpf, p20s, p5s, p60s, pl):
+    dfnpf_additional = dfnpf.with_columns(
+        pl.Series("Predicted 5m power", p5s),
+        pl.Series("Predicted 20m power", p20s),
+        pl.Series("Predicted 60m power", p60s),
+    )
+    return (dfnpf_additional,)
+
+
+@app.cell
+def _(dfnpf_additional, f_recent, plt):
+    plt.figure(figsize=(20, 10))
+
+    for t in [5, 
+              # 20, 
+              # 60,
+             ]:
+        plt.plot(
+            dfnpf_additional.filter(f_recent)["Activity Date"],
+            dfnpf_additional.filter(f_recent)[f"Predicted {t}m power"],
+            label=f"Predicted {t}m power"
+        )
+
+    plt.legend()
+    plt.grid()
+
+    plt.xlabel("Date of prediction")
+    plt.ylabel("Power (W)")
+
+    plt.gca()
     return
 
 
