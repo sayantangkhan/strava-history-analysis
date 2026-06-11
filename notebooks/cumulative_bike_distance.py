@@ -47,7 +47,7 @@ def _(df):
 
 @app.cell
 def _(datetime, df, pl, timezone):
-    start_date = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    start_date = datetime(2026, 1, 1, tzinfo=timezone.utc)
     f_date = pl.col("Activity Date") > start_date
 
     df_gear = df.filter(
@@ -69,6 +69,12 @@ def _(datetime, df, pl, timezone):
 def _(df_gear):
     bikes = df_gear["Activity Gear"].unique().to_list()
     return (bikes,)
+
+
+@app.cell
+def _():
+    styles = ["-", "--", ":", "-."]
+    return (styles,)
 
 
 @app.cell
@@ -112,86 +118,89 @@ def _(cs, df_gear, pl):
 
 
 @app.cell
-def _(bikes, cumulative, plt, start_date):
-    plt.figure(figsize=(20, 10))
+def _(bikes, cumulative, plt, start_date, styles):
+    def plot_cumulative_distance():
+        plt.figure(figsize=(20, 10))
 
-    styles = ["-", "--", ":", "-."]
+        for i, bike in enumerate(bikes):
+            plt.plot(
+                cumulative["Week"],
+                cumulative[bike],
+                linestyle=styles[i % len(styles)],
+                # markersize=10,
+                linewidth=2,
+                label=bike,
+            )
 
-    for i, bike in enumerate(bikes):
-        plt.plot(
-            cumulative["Week"],
-            cumulative[bike],
-            linestyle=styles[i % len(styles)],
-            # markersize=10,
-            linewidth=2,
-            label=bike,
-        )
+        plt.xlabel('Week')
+        plt.ylabel('Cumulative distance in KM')
 
-    plt.xlabel('Week')
-    plt.ylabel('Cumulative distance in KM')
+        plt.legend()
+        plt.grid()
 
-    plt.legend()
-    plt.grid()
+        plt.title(f"Cumulative distance on each bike since {start_date.date()}")
 
-    plt.title(f"Cumulative distance on each bike since {start_date.date()}")
+        return plt.gca()
 
-    plt.gca()
+    plot_cumulative_distance()
     return
 
 
 @app.cell
-def _(bikes, cumulative_time, plt, start_date):
-    plt.figure(figsize=(20, 10))
+def _(bikes, cumulative_time, plt, start_date, styles):
+    def plot_cumulative_time():
+        plt.figure(figsize=(20, 10))
 
-    styles = ["-", "--", ":", "-."]
+        for i, bike in enumerate(bikes):
+            plt.plot(
+                cumulative_time["Week"],
+                cumulative_time[bike],
+                linestyle=styles[i % len(styles)],
+                # markersize=10,
+                linewidth=2,
+                label=bike,
+            )
 
-    for i, bike in enumerate(bikes):
-        plt.plot(
-            cumulative_time["Week"],
-            cumulative_time[bike],
-            linestyle=styles[i % len(styles)],
-            # markersize=10,
-            linewidth=2,
-            label=bike,
-        )
+        plt.xlabel('Week')
+        plt.ylabel('Cumulative time in hours')
 
-    plt.xlabel('Week')
-    plt.ylabel('Cumulative time in hours')
+        plt.legend()
+        plt.grid()
 
-    plt.legend()
-    plt.grid()
+        plt.title(f"Cumulative time on each bike since {start_date.date()}")
 
-    plt.title(f"Cumulative time on each bike since {start_date.date()}")
+        return plt.gca()
 
-    plt.gca()
+    plot_cumulative_time()
     return
 
 
 @app.cell
-def _(bikes, cumulative_count, plt, start_date):
-    plt.figure(figsize=(20, 10))
+def _(bikes, cumulative_count, plt, start_date, styles):
+    def plot_cumulative_count():
+        plt.figure(figsize=(20, 10))
 
-    styles = ["-", "--", ":", "-."]
+        for i, bike in enumerate(bikes):
+            plt.plot(
+                cumulative_count["Week"],
+                cumulative_count[bike],
+                linestyle=styles[i % len(styles)],
+                # markersize=10,
+                linewidth=2,
+                label=bike,
+            )
 
-    for i, bike in enumerate(bikes):
-        plt.plot(
-            cumulative_count["Week"],
-            cumulative_count[bike],
-            linestyle=styles[i % len(styles)],
-            # markersize=10,
-            linewidth=2,
-            label=bike,
-        )
+        plt.xlabel('Week')
+        plt.ylabel('Cumulative bike ride counts')
 
-    plt.xlabel('Week')
-    plt.ylabel('Cumulative bike ride counts')
+        plt.legend()
+        plt.grid()
 
-    plt.legend()
-    plt.grid()
+        plt.title(f"Cumulative number of rides on each bike since {start_date.date()}")
 
-    plt.title(f"Cumulative number of rides on each bike since {start_date.date()}")
+        return plt.gca()
 
-    plt.gca()
+    plot_cumulative_count()
     return
 
 
