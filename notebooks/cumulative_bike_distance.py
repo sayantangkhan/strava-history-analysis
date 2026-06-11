@@ -58,7 +58,8 @@ def _(datetime, df, pl, timezone):
             pl.col("Activity Date"),
             pl.col("Activity Gear"),
             pl.col("Distance"),
-            (pl.col("Moving Time") / 3600).alias("Hours")
+            (pl.col("Moving Time") / 3600).alias("Hours"),
+            pl.lit(1).alias("Count"),
         ]
     )
     return df_gear, start_date
@@ -95,19 +96,19 @@ def _(cs, df_gear, pl):
         .fill_null(0)
         .with_columns(cs.numeric().cum_sum())
     )
-    return cumulative, cumulative_time
 
-
-@app.cell
-def _(cumulative):
-    cumulative
-    return
-
-
-@app.cell
-def _(cumulative_time):
-    cumulative_time
-    return
+    cumulative_count = (
+        df_gear
+        .with_columns(pl.col("Activity Date").dt.truncate("1w").alias("Week"))
+        .group_by("Week", "Activity Gear")
+        .agg(pl.col("Count").sum())
+        .pivot(on="Activity Gear", index="Week", values="Count")
+        .sort("Week")
+        .upsample(time_column="Week", every="1w")
+        .fill_null(0)
+        .with_columns(cs.numeric().cum_sum())
+    )
+    return cumulative, cumulative_count, cumulative_time
 
 
 @app.cell
@@ -161,6 +162,34 @@ def _(bikes, cumulative_time, plt, start_date):
     plt.grid()
 
     plt.title(f"Cumulative time on each bike since {start_date.date()}")
+
+    plt.gca()
+    return
+
+
+@app.cell
+def _(bikes, cumulative_count, plt, start_date):
+    plt.figure(figsize=(20, 10))
+
+    styles = ["-", "--", ":", "-."]
+
+    for i, bike in enumerate(bikes):
+        plt.plot(
+            cumulative_count["Week"],
+            cumulative_count[bike],
+            linestyle=styles[i % len(styles)],
+            # markersize=10,
+            linewidth=2,
+            label=bike,
+        )
+
+    plt.xlabel('Week')
+    plt.ylabel('Cumulative bike ride counts')
+
+    plt.legend()
+    plt.grid()
+
+    plt.title(f"Cumulative number of rides on each bike since {start_date.date()}")
 
     plt.gca()
     return
