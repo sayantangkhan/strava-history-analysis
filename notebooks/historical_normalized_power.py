@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.7"
+__generated_with = "0.23.13"
 app = marimo.App(width="full", app_title="Historical Normalized Power")
 
 
@@ -118,6 +118,12 @@ def _(compute_normalized_power, compute_peak_normalized_power, df, pl):
                 return_dtype=pl.Float64,
             )
             .alias("Peak 2h normalized power"),
+            pl.col("Filename")
+            .map_elements(
+                lambda f: compute_peak_normalized_power(20 * 60, f, root_path),
+                return_dtype=pl.Float64,
+            )
+            .alias("Peak 20m normalized power"),
         ]
     )
     return (dfnp,)
@@ -139,8 +145,15 @@ def _(pl):
         & (pl.col("Activity Type") == "Ride")
     )
 
+    f_valid_short = (
+        (pl.col("Normalized power") >= 50)
+        # & (pl.col("Peak 1h normalized power") > 220)
+        & (pl.col("Distance") >= 10)
+        & (pl.col("Activity Type") == "Ride")
+    )
+
     f_real_gear = pl.col("Activity Gear").is_not_null()
-    return f_real_gear, f_valid
+    return f_real_gear, f_valid, f_valid_short
 
 
 @app.cell
@@ -168,7 +181,7 @@ def _(bikes, dfnp, f_valid, pl, plt):
         "*",
         "x",
         "d",
-        # "s",
+        "s",
     ]
 
     plt.figure(figsize=(20, 10))
@@ -188,6 +201,32 @@ def _(bikes, dfnp, f_valid, pl, plt):
 
     plt.xlabel("Date")
     plt.ylabel("Ride peak 1h normalized power")
+
+    plt.grid()
+
+    plt.gca()
+    return filters, markers
+
+
+@app.cell
+def _(dfnp, f_valid_short, filters, markers, plt):
+    plt.figure(figsize=(20, 10))
+
+    for (b1, f1), m1 in zip(filters, markers):
+        plt.scatter(
+            dfnp.filter(f_valid_short & f1)["Activity Date"],
+            dfnp.filter(f_valid_short & f1)["Peak 20m normalized power"],
+            s=(dfnp.filter(f_valid_short & f1)["Distance"] / 20) ** 1.5 * 5,
+            marker=m1,
+            label=b1,
+            alpha=0.6,
+        )
+
+    plt.ylim((150, 300))
+    plt.legend(loc=2)
+
+    plt.xlabel("Date")
+    plt.ylabel("Ride peak 20m normalized power")
 
     plt.grid()
 
@@ -212,11 +251,6 @@ def _(f_valid, pl):
 @app.cell
 def _(dfnp, f_high_peak):
     dfnp.filter(f_high_peak).tail(10)
-    return
-
-
-@app.cell
-def _():
     return
 
 

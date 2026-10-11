@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.23.7"
+__generated_with = "0.24.2"
 app = marimo.App(width="medium", app_title="Cumulative bike distance")
 
 
@@ -41,7 +41,7 @@ def _(get_spine):
 
 @app.cell
 def _(df):
-    df
+    df.tail(10)
     return
 
 
@@ -115,6 +115,20 @@ def _(cs, df_gear, pl):
         .with_columns(cs.numeric().cum_sum())
     )
     return cumulative, cumulative_count, cumulative_time
+
+
+@app.cell
+def _(cumulative):
+    cumulative.tail(1)
+    return
+
+
+@app.cell
+def _(cumulative):
+    days_of_ownership = (cumulative.tail(1)["Week"] - cumulative.filter(cumulative["Ship of Theseus"] == 0).tail(1)["Week"]).dt.total_days()[0]
+    distance_ridden_on_sot = cumulative.tail(1)["Ship of Theseus"][0]
+    distance_ridden_on_sot / days_of_ownership
+    return
 
 
 @app.cell
@@ -201,6 +215,72 @@ def _(bikes, cumulative_count, plt, start_date, styles):
         return plt.gca()
 
     plot_cumulative_count()
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    # Weekly training volume
+
+    Total hours ridden per week across all bikes, indexed by week number since
+    `start_date`. Weeks with no rides show up as zero rather than being skipped.
+    """)
+    return
+
+
+@app.cell
+def _(df_gear, pl, start_date):
+    weekly_hours = (
+        df_gear
+        .with_columns(pl.col("Activity Date").dt.truncate("1w").alias("Week"))
+        .group_by("Week")
+        .agg(pl.col("Hours").sum())
+        .sort("Week")
+        .upsample(time_column="Week", every="1w")
+        .fill_null(0)
+        .with_columns(
+            (
+                (pl.col("Week") - pl.lit(start_date).dt.truncate("1w")).dt.total_days() // 7
+            ).alias("Week Number"),
+            pl.col("Hours").rolling_mean(window_size=4, min_samples=1).alias("Rolling Hours"),
+        )
+    )
+    return (weekly_hours,)
+
+
+@app.cell
+def _(plt, start_date, weekly_hours):
+    def plot_weekly_hours():
+        plt.figure(figsize=(20, 10))
+
+        plt.bar(
+            weekly_hours["Week Number"],
+            weekly_hours["Hours"],
+            width=0.8,
+            label="Weekly hours",
+        )
+
+        plt.plot(
+            weekly_hours["Week Number"],
+            weekly_hours["Rolling Hours"],
+            linestyle="-",
+            linewidth=2,
+            color="black",
+            label="4 week rolling average",
+        )
+
+        plt.xlabel(f"Weeks since {start_date.date()}")
+        plt.ylabel('Hours ridden')
+
+        plt.legend()
+        plt.grid(axis="y")
+
+        plt.title(f"Weekly riding volume across all bikes since {start_date.date()}")
+
+        return plt.gca()
+
+    plot_weekly_hours()
     return
 
 

@@ -9,6 +9,7 @@ import fitparse
 import json
 import os
 import polars as pl
+import tempfile
 
 # Listing out fields from the fit file I want to ignore for now
 FIT_FILE_FIELDS_TO_IGNORE = {
@@ -116,6 +117,20 @@ def get_time_series(file_path: str, root_path: str = "./") -> pl.DataFrame:
     else:
         df = parse_strava_series(full_source_path)
 
-    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-    df.write_parquet(cache_path)
+    cache_dir = os.path.dirname(cache_path)
+    os.makedirs(cache_dir, exist_ok=True)
+    # Write to a temporary file and rename it into place, so the cache only ever contains
+    # complete files. Writing directly to cache_path leaves a truncated file behind if the
+    # write is interrupted, and every later read then trusts that stub. The temp name is
+    # unique so that two processes caching the same activity (a marimo kernel and a script,
+    # say) don't rename each other's half-written file.
+    fd, temp_path = tempfile.mkstemp(dir=cache_dir, suffix=".parquet.tmp")
+    os.close(fd)
+    try:
+        df.write_parquet(temp_path)
+        os.replace(temp_path, cache_path)
+    except BaseException:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise
     return df

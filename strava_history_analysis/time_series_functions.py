@@ -205,7 +205,18 @@ def normalized_power() -> List[pl.Expr]:
 
 
 def peak_normalized_power(duration_seconds: int) -> pl.Expr:
-    thirty_second_average = pl.col("power").rolling_mean(30).alias("30s average")
+    # The 30s average is a rolling *sum* over 30, which treats the 29 rows before the ride
+    # has 30 seconds of history as if power were zero — which it was, the rider wasn't
+    # pedalling yet. A plain rolling_mean leaves those rows null and the nulls then poison
+    # every outer window overlapping them, so a ride needed duration_seconds + 29 samples
+    # before any peak could be reported (a 20:27 TT returned None for its peak 20 minute
+    # power). Using rolling_mean(30, min_samples=1) instead would divide by the samples
+    # seen so far, under-smoothing a hard start: a ride opening with a 640W sprint reported
+    # a 210W peak 20 minute power against a true 185W. The outer window keeps the default
+    # min_samples, so a ride shorter than duration_seconds still yields null.
+    thirty_second_average = (pl.col("power").rolling_sum(30, min_samples=1) / 30).alias(
+        "30s average"
+    )
     l4_norm = ((thirty_second_average**4).rolling_mean(duration_seconds) ** 0.25).alias(
         "Normalized power"
     )
