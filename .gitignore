@@ -14,3 +14,6 @@ wheels/
 /cache/
 /notebooks/.ipynb_checkpoints/
 /notebooks/__marimo__/
+
+# Claude-generated analyses and pages (kept locally, not committed)
+/claude-artifacts/
