@@ -8,7 +8,12 @@ to be added to the main spine.
 import polars as pl
 from typing import List
 import numpy as np
-from .time_series_parser import get_time_series
+from .time_series_parser import (
+    MOVING_SPEED_THRESHOLD,
+    get_time_series,
+    source_columns,
+    to_uniform_time_series,
+)
 
 
 def compute_peak_normalized_power(duration_seconds, filename, root_path) -> np.float64:
@@ -43,123 +48,41 @@ def compute_power_functional(functional, filename, root_path) -> np.float64:
         return None
 
 
-# This is a dictionary where the keys are the names of
-# the fields we will use in our code, and the values are 2-tuples,
-# the first element of which is what the field is called in the garmin fit
-# and the second element is what it's called strava data.
-FIELD_NAME_MAPPINGS = {
-    "power": ("power (watts)", "watts"),
-    "heartrate": ("heart_rate (bpm)", "heartrate"),
-}
-
-
-## The various field adapters go in here
-def fit_adapter(
-    fields: List[str], df: pl.DataFrame, moving_speed_threshold: float = 1.5
-):
-    speed = df.get_column(
-        "speed (m/s)", default=pl.repeat(0.0, df.shape[0], dtype=pl.Float64)
-    )
-    enhanced_speed = df.get_column(
-        "enhanced_speed (m/s)", default=pl.repeat(0.0, df.shape[0], dtype=pl.Float64)
-    )
-
-    fIsMoving = (speed >= moving_speed_threshold) | (
-        enhanced_speed >= moving_speed_threshold
-    )
-
-    selectors = []
-    selectors.append(
-        (pl.col("timestamp (None)") - pl.col("timestamp (None)").first()).alias(
-            "duration"
-        )
-    )
+## Adapters
+#
+# These predate get_activity_time_series and keep their original output for the scalar pipeline
+# and the notebooks: a `duration` column, the requested fields with missing samples zero-filled,
+# and `fIsMoving`, with no resampling. They raise ColumnNotFoundError when the activity didn't
+# record a requested field, which the compute_* helpers turn into None. New code should use
+# get_activity_time_series (or to_uniform_time_series) directly.
+def general_adapter(
+    fields: list[str],
+    df: pl.DataFrame,
+    moving_speed_threshold: float = MOVING_SPEED_THRESHOLD,
+) -> pl.DataFrame:
     for f in fields:
-        selectors.append(
-            pl.col(FIELD_NAME_MAPPINGS[f][0])
-            .cast(pl.Float64)
-            .fill_null(strategy="zero")
-            .alias(f)
-        )
-
-    selectors.append((fIsMoving).alias("fIsMoving"))
-
-    return df.select(selectors)
-
-
-def strava_api_adapter(fields: List[str], df: pl.DataFrame):
-    selectors = []
-    selectors.append(
-        (pl.duration(seconds=(pl.col("time") - pl.col("time").first()))).alias(
-            "duration"
-        )
+        if not source_columns(df, f):
+            raise pl.exceptions.ColumnNotFoundError(f"No {f} data in this time series")
+    uniform = to_uniform_time_series(
+        df, resample_1hz=False, moving_speed_threshold=moving_speed_threshold
     )
-
-    for f in fields:
-        selectors.append(
-            pl.col(FIELD_NAME_MAPPINGS[f][1])
-            .cast(pl.Float64)
-            .fill_null(strategy="zero")
-            .alias(f)
-        )
-
-    selectors.append(
-        (pl.col("moving")).alias("fIsMoving"),
-    )
-
-    return df.select(selectors)
-
-
-# Power
-def fit_power_adapter(df: pl.DataFrame, moving_speed_threshold=1.5) -> pl.DataFrame:
-    return fit_adapter(
-        ["power"],
-        df,
-        moving_speed_threshold,
+    return uniform.select(
+        pl.col("elapsed").alias("duration"),
+        *(pl.col(f).fill_null(0.0) for f in fields),
+        pl.col("fIsMoving"),
     )
 
 
-def strava_api_power_adapter(df: pl.DataFrame) -> pl.DataFrame:
-    return strava_api_adapter(
-        ["power"],
-        df,
-    )
+def general_power_adapter(
+    df: pl.DataFrame, moving_speed_threshold=MOVING_SPEED_THRESHOLD
+) -> pl.DataFrame:
+    return general_adapter(["power"], df, moving_speed_threshold)
 
 
-# HR
-def fit_hr_adapter(df: pl.DataFrame, moving_speed_threshold=1.5) -> pl.DataFrame:
-    return fit_adapter(
-        ["heartrate"],
-        df,
-        moving_speed_threshold,
-    )
-
-
-def strava_api_hr_adapter(df: pl.DataFrame) -> pl.DataFrame:
-    return strava_api_adapter(
-        ["heartrate"],
-        df,
-    )
-
-
-def general_power_adapter(df: pl.DataFrame, moving_speed_threshold=1.5) -> pl.DataFrame:
-    # Uses one of the two power adapter functions based on whether the dataframe
-    # comes from a fit file or a strava api pull
-    if "moving" in df:
-        # Comes from strava api pull
-        return strava_api_power_adapter(df)
-    else:
-        return fit_power_adapter(df, moving_speed_threshold=moving_speed_threshold)
-
-
-def general_hr_adapter(df: pl.DataFrame, moving_speed_threshold=1.5) -> pl.DataFrame:
-    # Uses one of the two power adapter functions based on whether the dataframe
-    # comes from a fit file or a strava api pull
-    if "moving" in df:
-        # Comes from strava api pull
-        return strava_api_hr_adapter(df)
-    else:
-        return fit_hr_adapter(df, moving_speed_threshold=moving_speed_threshold)
+def general_hr_adapter(
+    df: pl.DataFrame, moving_speed_threshold=MOVING_SPEED_THRESHOLD
+) -> pl.DataFrame:
+    return general_adapter(["heartrate"], df, moving_speed_threshold)
 
 
 # TODO: Make this more general
