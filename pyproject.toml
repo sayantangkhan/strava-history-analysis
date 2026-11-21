@@ -23,3 +23,9 @@ strava-history-analysis = "strava_history_analysis.main:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.ruff]
+# The notebooks are marimo apps. marimo writes a trailing `return` in every cell, shows a cell's
+# bare last expression as its output, and lets other cells use a cell's imports without
+# referencing them in that cell, so several rules misfire there.
+extend-exclude = ["notebooks"]
