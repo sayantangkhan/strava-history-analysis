@@ -35,11 +35,11 @@ zscore.
 """
 
 from dataclasses import dataclass
+
 import numpy as np
 from numpy.typing import NDArray
-from typing import List, Tuple
 from scipy.optimize import minimize
-from scipy.stats import norm, multivariate_normal
+from scipy.stats import multivariate_normal, norm
 
 
 @dataclass
@@ -70,8 +70,8 @@ class PacingModel:
 
     def update_based_on_observations(
         self,
-        censored_observations: List[Tuple[int, float]],
-        uncensored_observations: List[Tuple[int, float]],
+        censored_observations: list[tuple[int, float]],
+        uncensored_observations: list[tuple[int, float]],
         noise_floor_A: float = 100.0,  # std of 10 W·min
         noise_floor_B: float = 25.0,  # std of 5
     ):

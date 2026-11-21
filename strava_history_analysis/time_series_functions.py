@@ -5,9 +5,9 @@ This module contains functions that convert a time series into a scalar,
 to be added to the main spine.
 """
 
-import polars as pl
-from typing import List
 import numpy as np
+import polars as pl
+
 from .time_series_parser import (
     MOVING_SPEED_THRESHOLD,
     get_time_series,
@@ -99,11 +99,7 @@ def fill_duration_gaps(df: pl.DataFrame) -> pl.DataFrame:
     max_seconds = duration_seconds.max()
 
     complete_range = pl.DataFrame(
-        {
-            "duration": (pl.Series(range(0, max_seconds + 1)) * 1e6).cast(
-                pl.Duration("us")
-            )
-        }
+        {"duration": (pl.Series(range(max_seconds + 1)) * 1e6).cast(pl.Duration("us"))}
     )
 
     result = complete_range.join(df, on="duration", how="left")
@@ -121,7 +117,7 @@ def fill_duration_gaps(df: pl.DataFrame) -> pl.DataFrame:
 # Analytics
 
 
-def normalized_power() -> List[pl.Expr]:
+def normalized_power() -> list[pl.Expr]:
     thirty_second_average = pl.col("power").rolling_mean(30).alias("30s average")
     l4_norm = ((thirty_second_average**4).mean() ** 0.25).alias("Normalized power")
     return l4_norm

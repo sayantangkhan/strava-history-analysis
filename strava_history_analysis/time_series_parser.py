@@ -5,12 +5,13 @@ In this module, we parse fit files and strava time series streams into a common 
 The common format will be a polars DataFrame.
 """
 
-import fitparse
 import json
 import os
-import polars as pl
 import tempfile
 from datetime import datetime, timedelta
+
+import fitparse
+import polars as pl
 
 # Listing out fields from the fit file I want to ignore for now
 FIT_FILE_FIELDS_TO_IGNORE = {
@@ -44,7 +45,7 @@ def parse_fit_file(fit_file_path: str) -> pl.DataFrame:
             if combined_name not in dataframe:
                 dataframe[combined_name] = [None] * index
             dataframe[combined_name].append(value)
-        for _, v in dataframe.items():
+        for v in dataframe.values():
             # Checking if some field was missing values in this record
             # If so, we populate with None, and hope polars knows how to deal with it
             if len(v) < index + 1:
@@ -80,7 +81,7 @@ def parse_strava_series(series_file_path: str) -> pl.DataFrame:
         parsed_json_file = json.load(f)
 
     dataframe = {}
-    for f in parsed_json_file.keys():
+    for f in parsed_json_file:
         dataframe[f] = parsed_json_file[f]["data"]
 
     return pl.DataFrame(dataframe)
