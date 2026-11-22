@@ -32,7 +32,9 @@ Each activity's time-series lives in one of two formats:
 
 `get_time_series(file_path, root_path)` in `time_series_parser.py` dispatches by extension and **caches parsed output as parquet under `cache/`** (e.g. `fit_files/foo.fit` → `cache/activities/foo_fit.parquet`). Always go through `get_time_series` rather than parsing directly.
 
-Downstream analysis must not branch on source format. Instead, `time_series_functions.general_power_adapter` / `general_hr_adapter` detect which format you have (presence of the `"moving"` column ⇒ Strava API) and produce a normalized DataFrame with stable columns: `duration`, `power`/`heartrate`, `fIsMoving`. Add new shared field types to `FIELD_NAME_MAPPINGS` in `time_series_functions.py` (the tuple is `(fit_name, strava_name)`) and route them through `fit_adapter` / `strava_api_adapter`.
+Downstream analysis must not branch on source format. Use `get_activity_time_series(spine, activity_id, root_path)` in `time_series_parser.py`, which returns a uniform frame (`UNIFORM_SCHEMA`: absolute UTC `timestamp`, `elapsed`, `moving_time`, `fIsMoving`, `power`, `heartrate`, `cadence`, `speed`, `distance`, `altitude`, `temperature`, `lat`, `lng`) whichever format the activity came from. It is resampled to 1 Hz by default (gaps are null rows, not moving), unrecorded fields are all-null rather than absent, and nothing is zero-filled. `fIsMoving` is `speed >= MOVING_SPEED_THRESHOLD` (1.5 m/s) for both formats; Strava's own `moving` flag is ignored. Format detection (presence of the `"moving"` column ⇒ Strava API) lives in `is_strava_api_series`; `to_uniform_time_series(raw, start_time)` does the conversion on a raw frame. Add new shared fields to `FIELD_NAME_MAPPINGS` in `time_series_parser.py` (`name → ([fit columns, in preference order], strava_column)`).
+
+`time_series_functions.general_power_adapter` / `general_hr_adapter` are legacy wrappers over the uniform frame for the scalar pipeline and notebooks: columns `duration`, `power`/`heartrate` (zero-filled), `fIsMoving`, no resampling, and they raise `ColumnNotFoundError` when the field wasn't recorded.
 
 ### Analytics layer
 

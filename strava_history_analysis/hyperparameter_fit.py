@@ -9,16 +9,16 @@ in the module.
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor
 
-import polars as pl
 import numpy as np
+import polars as pl
 
 from strava_history_analysis import get_spine
-from strava_history_analysis.time_series_functions import (
-    compute_peak_normalized_power,
-    compute_peak_average_power,
-    compute_normalized_power,
-)
 from strava_history_analysis.pacing_calculator import PacingModel
+from strava_history_analysis.time_series_functions import (
+    compute_normalized_power,
+    compute_peak_average_power,
+    compute_peak_normalized_power,
+)
 
 # Range of hyperparameters we search over
 TAU_RANGE = np.linspace(0.4, 0.6, 40)

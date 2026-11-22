@@ -4,10 +4,12 @@ Docstring for database
 This module contains the basic functions we will use to create/update the database of fit file associated activities
 """
 
-import polars as pl
-import os
-from .stravalib_wrapper import initialize_client
 import json
+import os
+
+import polars as pl
+
+from .stravalib_wrapper import initialize_client
 
 
 def initialize_db_from_strava_dump(root_path="./"):
